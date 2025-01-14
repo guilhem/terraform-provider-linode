@@ -100,11 +100,6 @@ func (r *Resource) Read(
 
 	ctx = populateLogAttributes(ctx, state)
 
-	// TODO: cleanup when Crossplane fixes it
-	if helper.FrameworkAttemptRemoveResourceForEmptyID(ctx, state.ID, resp) {
-		return
-	}
-
 	id := helper.FrameworkSafeStringToInt(state.ID.ValueString(), &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
