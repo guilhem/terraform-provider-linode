@@ -25,6 +25,8 @@ func TestClientRetryAfter(t *testing.T) {
 		{"beyond maximum", "1", time.Second, ""},
 		{"absent", "", 20 * time.Millisecond, ""},
 		{"zero", "0", 20 * time.Millisecond, ""},
+		{"negative", "-1", 20 * time.Millisecond, ""},
+		{"negative duration overflow", "-10000000000", 20 * time.Millisecond, ""},
 		{"malformed", "invalid", 0, "strconv.Atoi"},
 		{"duration overflow", "9223372036854775807", 0, "Retry-After duration is too large"},
 	} {
@@ -55,7 +57,9 @@ func TestClientRetryAfter(t *testing.T) {
 			require.NoError(t, err)
 			client.SetRetryCount(1)
 
-			domain, err := client.GetDomain(context.Background(), 1)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			domain, err := client.GetDomain(ctx, 1)
 			if test.wantErr != "" {
 				require.ErrorContains(t, err, test.wantErr)
 				require.EqualValues(t, 1, requests.Load(), "invalid headers must stop retries")

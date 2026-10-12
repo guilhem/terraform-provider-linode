@@ -84,13 +84,13 @@ func ApplyAllRetryConditions(client *linodego.Client) {
 		if err != nil {
 			return 0, err
 		}
+		if seconds <= 0 {
+			return 0, nil
+		}
 		if int64(seconds) > math.MaxInt64/int64(time.Second) {
 			return 0, fmt.Errorf("Retry-After duration is too large: %q", header)
 		}
 		delay := time.Duration(seconds) * time.Second
-		if delay <= 0 {
-			return delay, nil
-		}
 
 		// Wait here to bypass Resty's RetryMaxWaitTime cap, then use its normal backoff.
 		timer := time.NewTimer(delay)
