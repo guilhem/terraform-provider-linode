@@ -1,9 +1,13 @@
 package helper
 
 import (
+	"fmt"
 	"log"
+	"math"
 	"net/url"
 	"regexp"
+	"strconv"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/linode/linodego"
@@ -71,6 +75,34 @@ func GenericRetryCondition(statusCode int, pathPattern *regexp.Regexp) func(resp
 }
 
 func ApplyAllRetryConditions(client *linodego.Client) {
+	client.SetRetryAfter(func(_ *resty.Client, resp *resty.Response) (time.Duration, error) {
+		header := resp.Header().Get("Retry-After")
+		if header == "" {
+			return 0, nil
+		}
+		seconds, err := strconv.Atoi(header)
+		if err != nil {
+			return 0, err
+		}
+		if seconds <= 0 {
+			return 0, nil
+		}
+		if int64(seconds) > math.MaxInt64/int64(time.Second) {
+			return 0, fmt.Errorf("Retry-After duration is too large: %q", header)
+		}
+		delay := time.Duration(seconds) * time.Second
+
+		// Wait here to bypass Resty's RetryMaxWaitTime cap, then use its normal backoff.
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+		select {
+		case <-resp.Request.Context().Done():
+			return 0, resp.Request.Context().Err()
+		case <-timer.C:
+			return 0, nil
+		}
+	})
+
 	client.AddRetryCondition(Database502Retry())
 	client.AddRetryCondition(LinodeInstance500Retry())
 	client.AddRetryCondition(ImageUpload500Retry())
