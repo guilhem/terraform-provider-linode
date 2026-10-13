@@ -241,7 +241,7 @@ func reconcileName(ctx context.Context, client linodego.Client, d *schema.Resour
 	tflog.Trace(ctx, "Reconcile record name")
 
 	plannedName, ok := d.GetOk("name")
-	if !ok {
+	if !ok || plannedName.(string) == apiName {
 		return apiName, nil
 	}
 
