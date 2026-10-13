@@ -284,10 +284,6 @@ func providerConfigure(
 		return nil, diag.Errorf("failed to initialize client: %s", err)
 	}
 
-	// Ping the API for an empty response to verify the configuration works
-	if _, err := client.ListTypes(ctx, linodego.NewListOptions(100, "")); err != nil {
-		return nil, diag.Errorf("Error connecting to the Linode API: %s", err)
-	}
 	return &helper.ProviderMeta{
 		Client: *client,
 		Config: config,
